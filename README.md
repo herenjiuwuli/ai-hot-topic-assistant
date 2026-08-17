@@ -4,6 +4,9 @@
 
 基于 **Vue 3 + Vite + Express（Serverless）+ DeepSeek** 的全栈应用，一键部署到 Vercel。
 
+🔗 **线上演示**：[ai-hot-topic-assistant.vercel.app](https://ai-hot-topic-assistant.vercel.app)
+🔗 **源码仓库**：[github.com/herenjiuwuli/ai-hot-topic-assistant](https://github.com/herenjiuwuli/ai-hot-topic-assistant)
+
 ---
 
 ## ✨ 功能特性
@@ -14,6 +17,20 @@
 - **脚本 / 文案** — 选中选题一键生成短视频分镜脚本，或小红书风格图文文案
 - **趋势追踪** — 近 7 天热词热度走势图（依赖每日快照累积）
 - **数据复盘** — 播放量 / 点赞量记录，柱状图对比，支持批量导入
+
+---
+
+## 📸 项目截图
+
+| 热榜页 | 选题生成 | 选题库 |
+|---|---|---|
+| ![热榜页](docs/screenshots/hotlist.png) | ![选题生成](docs/screenshots/topics.png) | ![选题库](docs/screenshots/saved-topics.png) |
+
+| 趋势追踪 | 数据复盘 |
+|---|---|
+| ![趋势追踪](docs/screenshots/trend.png) | ![数据复盘](docs/screenshots/review.png) |
+
+> 截图请放入仓库 `docs/screenshots/` 目录，文件名与上方一致即可自动渲染（你可以把应用截图按这 5 个名字存进去）。
 
 ---
 
@@ -139,6 +156,19 @@ npm run dev
 
 - **趋势图**依赖每日快照累积：首次部署后只有当天数据，持续运行数天后走势才会完整；也可在页面点「保存今日快照」手动补录。
 - **持久化**：配置了 `BLOB_READ_WRITE_TOKEN` 后，数据写入 Vercel Blob，跨刷新保留；未配置时回退本地临时存储，刷新即丢。
+
+---
+
+## 📖 使用说明
+
+1. **看热榜**：首页选择平台（抖音 / 小红书 / B站），查看当日热榜，可搜索关键词、订阅感兴趣的热点。
+2. **生成选题**：进入「选题」页，填写账号定位（如「二次元手办测评」），AI 结合当日热榜生成 5 个不同切入角度的选题。
+3. **存入选题库**：选中喜欢的选题「保存到选题库」，后续可标记「已发布」状态，形成收集 → 发布 → 复盘闭环。
+4. **生成脚本 / 文案**：在选题库或选题详情中一键生成短视频分镜脚本，或小红书风格图文文案。
+5. **追踪趋势**：在「趋势」页输入热词，查看近 7 天热度走势（需先积累每日快照）。
+6. **数据复盘**：在「复盘」页记录播放量 / 点赞量，支持批量导入，柱状图对比表现。
+
+> 提示：AI 功能依赖 `DEEPSEEK_API_KEY`；数据持久化依赖 `BLOB_READ_WRITE_TOKEN`，未配置时线上数据刷新即丢。
 
 ---
 
