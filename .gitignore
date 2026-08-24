@@ -30,3 +30,8 @@ data/
 .env
 .env.*
 !.env.example
+
+# Python 测试环境
+.venv/
+__pycache__/
+*.pyc

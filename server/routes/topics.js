@@ -10,6 +10,9 @@ router.post('/api/topics', async (req, res) => {
     if (!positioning || !platform) {
       return res.status(400).json({ error: '缺少定位或平台参数' })
     }
+    if (!isValidPlatform(platform)) {
+      return res.status(400).json({ error: '非法平台参数' })
+    }
 
     // 获取当日 Top 15 热榜
     const today = new Date().toISOString().slice(0, 10)

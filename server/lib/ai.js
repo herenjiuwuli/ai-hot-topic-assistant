@@ -2,7 +2,8 @@ export async function chatWithDeepSeek(messages) {
   const apiKey = process.env.DEEPSEEK_API_KEY
   if (!apiKey) throw new Error('DEEPSEEK_API_KEY not configured')
 
-  const res = await fetch('https://api.deepseek.com/v1/chat/completions', {
+  const baseUrl = process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com'
+  const res = await fetch(`${baseUrl}/v1/chat/completions`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

@@ -23,8 +23,10 @@ router.post('/api/reviews', async (req, res) => {
   try {
     const { title, platform, views, likes, date } = req.body || {}
     if (!title || !platform) return res.status(400).json({ error: '缺少 title 或 platform' })
-    const viewsNum = Number(views) || 0
-    const likesNum = Number(likes) || 0
+    const viewsNum = views === undefined ? 0 : Number(views)
+    const likesNum = likes === undefined ? 0 : Number(likes)
+    if (Number.isNaN(viewsNum)) return res.status(400).json({ error: 'views 必须为数字' })
+    if (Number.isNaN(likesNum)) return res.status(400).json({ error: 'likes 必须为数字' })
     const list = (await readJSON(KEY)) || []
     const record = {
       id: newId(),
