@@ -1,8 +1,9 @@
-# AI 热点选题助手
+# AI 热点选题助手（ReAct Agent + RAG）
 
-> 面向 MCN 达人运营的 AI 选题工具：自动抓取抖音 / 小红书 / B站 热榜，结合账号定位用 AI 生成可落地选题，并支持选题库、趋势追踪与数据复盘。
+> **项目描述**：面向 MCN 达人运营的 **AI Agent 选题工具**。它不是"一次提问出一批选题"的普通 AI 工具，而是一个 **ReAct 工具调用 Agent**——收到需求后自主决定调用工具（抓热榜 → 检索运营知识库 → 找参考角度 → 生成脚本 → 保存选题库 → 规划排期），把"今天该发什么"从拍脑袋变成可落地的选题 + 脚本 + 排期闭环。
+> 亮点：**RAG 检索增强**——Agent 生成内容前先检索自建运营知识库（二次元赛道打法 / 平台规则与雷区 / 爆款复盘 / 人设定位），缓解幻觉、主动规避版权与平台红线。
 
-基于 **Vue 3 + Vite + Express（Serverless）+ DeepSeek** 的全栈应用，一键部署到 Vercel。
+基于 **Vue 3 + Vite + Express（Serverless）+ DeepSeek + 自写 RAG** 的全栈应用，一键部署到 Vercel。
 
 🔗 **线上演示**：[ai-hot-topic-assistant.vercel.app](https://ai-hot-topic-assistant.vercel.app)
 🔗 **源码仓库**：[github.com/herenjiuwuli/ai-hot-topic-assistant](https://github.com/herenjiuwuli/ai-hot-topic-assistant)
@@ -11,12 +12,39 @@
 
 ## ✨ 功能特性
 
+- **🤖 Agent 智能选题（ReAct）** — 输入需求，Agent 自主编排工具链：抓热榜 → 检索知识库/参考资料 → 生成脚本 → 保存选题 → 规划排期，SSE 流式逐步展示思考轨迹
+- **📚 RAG 知识库检索** — 生成前先向量检索运营知识库（4 篇方法论文档），让选题"有据可依"、主动避开版权/未成年等雷区
 - **实时热榜** — 抖音 / 小红书 / B站 当日热榜，支持关键词搜索与热点订阅
-- **AI 选题** — 输入账号定位，AI 结合当日热榜生成 5 个不同切入角度的选题（DeepSeek）
 - **选题库** — 保存选题 → 标记已发布 → 去复盘，三态闭环管理
-- **脚本 / 文案** — 选中选题一键生成短视频分镜脚本，或小红书风格图文文案
+- **脚本 / 文案** — 一键生成短视频分镜脚本，或小红书风格图文文案
 - **趋势追踪** — 近 7 天热词热度走势图（依赖每日快照累积）
 - **数据复盘** — 播放量 / 点赞量记录，柱状图对比，支持批量导入
+
+---
+
+## 🤖 Agent 智能选题（核心能力）
+
+项目核心是一个 **ReAct（Reason + Act）工具调用 Agent**：
+
+```
+用户需求
+   │
+   ▼
+[LLM 决策] ──调用工具──▶ fetch_hot_topics 抓热榜
+   │                        search_reference 找参考角度
+   │                        search_knowledge 检索知识库（RAG）
+   │                        generate_script 生成脚本
+   │                        save_to_library 保存选题库
+   │                        plan_schedule 规划排期
+   │
+   └──── 结果回灌，再决策 ────▶ 直到产出完整答案（MAX_ITER=8 防死循环）
+```
+
+- **RAG 链路（自写，未用 LangChain）**：`knowledge/*.md` → 按标题/句边界切块（300–500 字）→ embedding 向量化 → 内存余弦 top-k 检索 → 片段回灌给 LLM。
+- **Embedding 可插拔**：`fake`（离线演示）/ `local`（bge 本地模型）/ `zhipu` / `volcengine` / `openai`（OpenAI 兼容接口）。
+- **Serverless 友好**：线上无索引文件时自动从 `knowledge/` **运行时构建**（一次批量 embedding）并内存缓存，与文档实时同步，无需提交索引。
+- **离线可演示**：`DEEPSEEK_MOCK=1` 时 LLM 与工具执行器都返回假数据，全链路不联网可跑。
+- **前端轨迹可视化**：SSE 流式渲染每一步工具调用与结果（知识库命中以片段卡片展示来源/标题/相关度）。
 
 ---
 
@@ -40,9 +68,11 @@
 |---|---|
 | 前端 | Vue 3（Composition API）+ Vue Router（hash 模式）+ Chart.js |
 | 后端 | Express（Vercel Serverless Function） |
-| AI | DeepSeek Chat Completions API |
+| AI | DeepSeek Chat Completions API（ReAct 工具调用） |
+| **RAG** | **自写**：切块 / embedding（智谱·火山·OpenAI 可插拔）/ 内存余弦检索（未用 LangChain） |
 | 数据源 | 60s 热榜 API（`https://60s.viki.moe`）、B站官方排行榜 API |
 | 存储 | Vercel Blob（线上）/ 本地 fs（本地兜底） |
+| 测试 | Vitest（37 例：Agent 14 + cron 2 + RAG 19 + 切分等） |
 | 部署 | Vercel（静态前端 `dist/` + `api/` Serverless 函数） |
 
 ---
@@ -57,18 +87,28 @@ ai-hot-topic-assistant/
 │   ├── index.js            # createApp()：注册路由 + /api/health
 │   ├── dev.js              # 本地开发启动（监听 :3000）
 │   ├── lib/
-│   │   ├── ai.js           # DeepSeek 调用
+│   │   ├── ai.js           # DeepSeek 调用（工具调用模式）
+│   │   ├── agent.js        # ReAct 循环：决策→执行→回灌，MAX_ITER=8，异常兜底
+│   │   ├── tools.js        # 工具定义 TOOLS + executeTool 分发 + mock 假数据
+│   │   ├── mockAgent.js    # 假 LLM（DEEPSEEK_MOCK=1 离线演示）
+│   │   ├── rag/
+│   │   │   ├── chunk.js    # 切块（标题/句边界，300–500 字）
+│   │   │   ├── embed.js    # embedding 可插拔（fake/local/zhipu/volcengine/openai）
+│   │   │   ├── store.js    # 内存余弦 top-k 检索
+│   │   │   └── ingest.js   # 建库：knowledge/*.md → 向量 → rag-index.json
+│   │   ├── tools/
+│   │   │   └── searchKnowledge.js  # search_knowledge 工具（索引/运行时构建 + 检索）
 │   │   ├── hotlistSource.js # 60s + B站 热榜抓取与归一化
-│   │   ├── normalize.js
 │   │   └── store.js        # Blob / fs 持久化封装
-│   └── routes/             # 业务路由（hotlist / topics / savedTopics / ...）
+│   └── routes/             # 业务路由（hotlist / topics / savedTopics / agent / ...）
+├── knowledge/              # RAG 运营知识库（4 篇 md，切分友好写法）
 ├── src/                    # Vue 3 前端
-│   ├── views/              # 页面：Hotlist / Topics / SavedTopics / Trend / Review ...
-│   ├── components/
-│   ├── router/
+│   ├── views/              # 页面：Hotlist / Topics / Agent / SavedTopics / Trend / Review ...
+│   ├── components/         # 含 TrajectoryStep.vue（Agent 轨迹逐步渲染）
 │   └── ...
+├── tests/                  # Vitest 测试（37 例）
 ├── public/
-├── vercel.json             # 构建配置 + rewrites（关键）
+├── vercel.json             # 构建配置 + rewrites + includeFiles（关键）
 ├── vite.config.js
 ├── package.json
 └── .env.example
@@ -88,8 +128,8 @@ npm run dev
 
 - 前端：http://localhost:5173
 - 后端：http://localhost:3000（Vite 已配置 `/api` 代理到该端口）
-
-> 本地可不配置 `BLOB_READ_WRITE_TOKEN`，数据自动回退到本地 `data/` 目录。
+- 本地可不配 `BLOB_READ_WRITE_TOKEN`，数据自动回退到本地 `data/` 目录
+- **体验 Agent**：页面进入「Agent」页提问（如"新人 coser 怎么定人设"）；不配 DeepSeek key 时设 `DEEPSEEK_MOCK=1` 可离线看完整流程
 
 ---
 
@@ -99,7 +139,10 @@ npm run dev
 
 | 变量 | 说明 | 默认值 |
 |---|---|---|
-| `DEEPSEEK_API_KEY` | DeepSeek API Key（`sk-` 开头，必填，仅线上配置） | - |
+| `DEEPSEEK_API_KEY` | DeepSeek API Key（`sk-` 开头，Agent 必填，仅线上配置） | - |
+| `EMBEDDING_PROVIDER` | RAG 向量化方案：`fake` / `local` / `zhipu` / `volcengine` / `openai` | `local` |
+| `EMBEDDING_API_KEY` | embedding 服务 Key（hosted 方案必填；智谱 open.bigmodel.cn / 火山方舟） | - |
+| `DEEPSEEK_MOCK` | 设为 `1` 时走假 LLM + 假工具，离线演示 Agent 全流程 | 空 |
 | `BLOB_READ_WRITE_TOKEN` | Vercel Blob 读写 Token（线上持久化用，本地可省略） | - |
 | `HOTLIST_BASE_URL` | 60s 热榜接口基础 URL | `https://60s.viki.moe` |
 | `HOTLIST_MIRROR_URL` | 60s 镜像 URL（主域名失败时回退） | 空 |
@@ -113,9 +156,11 @@ npm run dev
 | 方法 | 路径 | 说明 |
 |---|---|---|
 | GET | `/api/health` | 健康检查 |
+| POST | `/api/agent` | 运行 Agent（JSON 返回完整轨迹与终答） |
+| POST | `/api/agent/stream` | 运行 Agent（**SSE 流式**：step / done / error 逐步推送） |
 | GET | `/api/hotlist?platform=` | 获取实时热榜（在线失败自动回退本地快照） |
 | GET | `/api/bili-zone?rid=0` | B站分区排行榜 |
-| POST | `/api/topics` | 根据账号定位 + 热榜生成 5 个选题 |
+| POST | `/api/topics` | 根据账号定位 + 热榜生成 5 个选题（v1 直出模式） |
 | GET | `/api/saved-topics` | 选题库列表 |
 | POST | `/api/saved-topics` | 新增选题 |
 | PUT | `/api/saved-topics/:id` | 更新选题（含发布状态） |
@@ -135,6 +180,17 @@ npm run dev
 
 ---
 
+## 🧪 测试
+
+```bash
+npm test        # Vitest，37 例全绿（离线可跑：测试统一注入 fake embedding）
+npm run rag:ingest   # 重建 RAG 索引（读 knowledge/*.md → 生成 server/lib/rag/rag-index.json）
+```
+
+- 覆盖：Agent ReAct 循环（mock LLM 免网）、cron 定时抓取、RAG 切块/向量化/检索/工具接入、SSE 路由。
+
+---
+
 ## ☁️ 部署到 Vercel
 
 项目已内置 `vercel.json`，导入即部署，无需手动设置 Framework：
@@ -142,13 +198,17 @@ npm run dev
 1. 将代码推送到 GitHub
 2. 在 [Vercel](https://vercel.com) 点击 **Add New → Project**，导入本仓库
 3. Vercel 自动识别为 Vite 项目：`buildCommand` = `npm run build`，`outputDirectory` = `dist`
-4. 在 **Settings → Environment Variables** 配置上表中的环境变量
+4. 在 **Settings → Environment Variables** 配置：`DEEPSEEK_API_KEY` + `EMBEDDING_PROVIDER=zhipu` + `EMBEDDING_API_KEY`（三个环境都勾）
 5. 点击 Deploy；部署完成后在 **Deployments** 中 Redeploy 一次，让环境变量生效
 
-> ⚠️ **`vercel.json` 中的 `rewrites` 是必须的**：它把 `/api/*` 全部转发到 `api/index.js` 这个 Serverless 函数（Express 应用）。
-> 若缺少这条规则，线上所有 `/api/*` 接口都会返回 404 —— 因为 Vercel 默认只把 `api/index.js` 映射到 `/api` 单一路由，不会去匹配 `/api/health` 等子路径。
+> ⚠️ **`vercel.json` 中的 `rewrites` 是必须的**：它把 `/api/*` 全部转发到 `api/index.js` 这个 Serverless 函数（Express 应用）。若缺少，线上所有 `/api/*` 接口都会返回 404。
 >
-> `vercel.json` 中 `maxDuration` 设为 60 秒，用于避免 DeepSeek 调用偶发超时。
+> ⚠️ **RAG 线上运行三要素**：
+> 1. `api/index.js` 的 `includeFiles: "knowledge/**"`（保证知识文档打进函数包，已在 vercel.json 配好）；
+> 2. `EMBEDDING_PROVIDER` + `EMBEDDING_API_KEY`（hosted embedding，避免 Serverless 冷启动拉本地模型超时）；
+> 3. 索引无需提交——`searchKnowledge` 会在无索引时从 `knowledge/` 自动运行时构建并缓存。
+>
+> `maxDuration` 设为 60 秒，用于避免 DeepSeek / embedding 调用偶发超时。
 
 ---
 
@@ -161,14 +221,15 @@ npm run dev
 
 ## 📖 使用说明
 
-1. **看热榜**：首页选择平台（抖音 / 小红书 / B站），查看当日热榜，可搜索关键词、订阅感兴趣的热点。
-2. **生成选题**：进入「选题」页，填写账号定位（如「二次元手办测评」），AI 结合当日热榜生成 5 个不同切入角度的选题。
-3. **存入选题库**：选中喜欢的选题「保存到选题库」，后续可标记「已发布」状态，形成收集 → 发布 → 复盘闭环。
-4. **生成脚本 / 文案**：在选题库或选题详情中一键生成短视频分镜脚本，或小红书风格图文文案。
-5. **追踪趋势**：在「趋势」页输入热词，查看近 7 天热度走势（需先积累每日快照）。
-6. **数据复盘**：在「复盘」页记录播放量 / 点赞量，支持批量导入，柱状图对比表现。
+1. **Agent 智能选题（推荐）**：进入「Agent」页，输入需求（如"帮我做个 cos 版权安全的脚本"或"新人 coser 怎么定人设"），Agent 会自主抓热榜、查知识库、生成脚本、规划排期，轨迹逐步展示。结果可保存进选题库。
+2. **看热榜**：首页选择平台（抖音 / 小红书 / B站），查看当日热榜，可搜索关键词、订阅感兴趣的热点。
+3. **生成选题（v1 直出）**：「选题」页填写账号定位（如「二次元手办测评」），AI 结合当日热榜生成 5 个不同切入角度的选题。
+4. **存入选题库**：保存选题后可标记「已发布」，形成收集 → 发布 → 复盘闭环。
+5. **生成脚本 / 文案**：在选题库或选题详情中一键生成短视频分镜脚本，或小红书风格图文文案。
+6. **追踪趋势**：「趋势」页输入热词，查看近 7 天热度走势（需先积累每日快照）。
+7. **数据复盘**：「复盘」页记录播放量 / 点赞量，支持批量导入，柱状图对比表现。
 
-> 提示：AI 功能依赖 `DEEPSEEK_API_KEY`；数据持久化依赖 `BLOB_READ_WRITE_TOKEN`，未配置时线上数据刷新即丢。
+> 提示：Agent / 选题 AI 功能依赖 `DEEPSEEK_API_KEY`；RAG 检索依赖 `EMBEDDING_PROVIDER` + `EMBEDDING_API_KEY`；数据持久化依赖 `BLOB_READ_WRITE_TOKEN`，未配置时线上数据刷新即丢。
 
 ---
 
