@@ -27,6 +27,14 @@ ${base}
 
 ${base}`
 
+// 原文按空行分段（与 chunk.js 对齐）
+function paragraphsOf(text) {
+  return text
+    .split(/\n{2,}/)
+    .map((p) => p.trim())
+    .filter(Boolean)
+}
+
 describe('chunkText', () => {
   it('空文本返回空数组', () => {
     expect(chunkText('')).toEqual([])
@@ -39,32 +47,37 @@ describe('chunkText', () => {
     expect(chunks[0].text).toContain('一句话')
   })
 
-  it('长文本切成多块，且每块不超过 上限+重叠', () => {
-    const chunks = chunkText(doc, { maxChars: 450, overlap: 60 })
+  it('长文本切成多块，每块不超过上限', () => {
+    const chunks = chunkText(doc, { maxChars: 450 })
     expect(chunks.length).toBeGreaterThan(1)
     for (const c of chunks) {
-      expect(clen(c.text)).toBeLessThanOrEqual(450 + 60 + 5) // 容差
+      expect(clen(c.text)).toBeLessThanOrEqual(450 + 5) // 容差
     }
   })
 
-  it('不丢失任何原始段落（所有段落都出现在某块中）', () => {
-    const paras = doc
-      .split(/\n{2,}/)
-      .map((p) => p.trim())
-      .filter(Boolean)
-    const all = paras.join('\n')
-    const chunks = chunkText(doc, { maxChars: 450, overlap: 60 })
-    const merged = chunks.map((c) => c.text).join('\n')
-    // 每个原始段落的关键片段应能在合并结果里找到（重叠保证不被截断丢失）
-    for (const p of paras) {
-      const key = p.replace(/^#+\s*/, '').slice(0, 12)
-      if (key) expect(merged).toContain(key)
+  it('多段落文档：块间精确还原原文（不丢失、不重复、不插入）', () => {
+    const chunks = chunkText(doc, { maxChars: 450 })
+    const merged = chunks.map((c) => c.text).join('\n\n')
+    expect(merged).toBe(paragraphsOf(doc).join('\n\n'))
+  })
+
+  it('超长单段落按句末标点切分，句子不被切断、不重复', () => {
+    // 每句约 230 字 × 4 = 约 920 字，必被切成多块
+    const longPara = [1, 2, 3, 4].map((n) => `第${n}句：${base}`).join('')
+    const chunks = chunkText(longPara, { maxChars: 450 })
+    expect(chunks.length).toBeGreaterThan(1)
+    // 无分隔符拼接后与原文完全一致 → 证明不丢字、不重复、不插入
+    expect(chunks.map((c) => c.text).join('')).toBe(longPara)
+    // 非首块的起点必须紧跟句末标点（句子没被硬切，不再出现"接上文"的半个句子）
+    for (let i = 1; i < chunks.length; i++) {
+      const startIdx = longPara.indexOf(chunks[i].text)
+      expect(startIdx).toBeGreaterThan(0)
+      expect('。！？!?；;'.includes(longPara[startIdx - 1])).toBe(true)
     }
-    void all
   })
 
   it('保留标题作为块的 heading 上下文', () => {
-    const chunks = chunkText(doc, { maxChars: 450, overlap: 60 })
+    const chunks = chunkText(doc, { maxChars: 450 })
     const headings = chunks.map((c) => c.heading)
     expect(headings.some((h) => h.includes('赛道定位'))).toBe(true)
     expect(headings.some((h) => h.includes('内容支柱'))).toBe(true)
