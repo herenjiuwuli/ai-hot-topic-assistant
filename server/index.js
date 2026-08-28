@@ -7,6 +7,7 @@ import biliZoneRouter from './routes/biliZone.js'
 import savedTopicsRouter from './routes/savedTopics.js'
 import scriptRouter from './routes/script.js'
 import subscriptionsRouter from './routes/subscriptions.js'
+import agentRouter from './routes/agent.js'
 
 export function createApp() {
   const app = express()
@@ -20,6 +21,7 @@ export function createApp() {
   app.use(savedTopicsRouter)
   app.use(scriptRouter)
   app.use(subscriptionsRouter)
+  app.use(agentRouter)
 
   // Health check
   app.get('/api/health', (_req, res) => {

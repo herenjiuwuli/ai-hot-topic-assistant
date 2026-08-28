@@ -41,9 +41,9 @@
 </template>
 
 <script setup>
-import { ref, watch, onUnmounted } from 'vue'
+import { ref, onUnmounted } from 'vue'
 import { Chart, registerables } from 'chart.js'
-import { theme } from '../theme.js'
+import { CHART } from '../theme.js'
 
 Chart.register(...registerables)
 
@@ -61,7 +61,7 @@ const chartCanvas = ref(null)
 let chartInstance = null
 
 function primaryColor() {
-  return theme.value === 'dark' ? '#4ea1ff' : '#409eff'
+  return CHART.primary
 }
 
 function destroyChart() {
@@ -101,7 +101,7 @@ async function nextTickDraw() {
 
   const ctx = chartCanvas.value.getContext('2d')
   const c = primaryColor()
-  const gray = theme.value === 'dark' ? '#6b7280' : '#c0c4cc'
+  const gray = CHART.gray
   chartInstance = new Chart(ctx, {
     type: 'line',
     data: {
@@ -152,11 +152,6 @@ async function saveSnapshot() {
     snapshotLoading.value = false
   }
 }
-
-// 主题切换时重绘图表（颜色随深/浅变化）
-watch(theme, () => {
-  if (series.value.length > 0) nextTickDraw()
-})
 
 onUnmounted(() => destroyChart())
 </script>

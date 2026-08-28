@@ -8,6 +8,26 @@ function newId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 8)
 }
 
+// 保存选题的核心逻辑（抽出来供 Agent 的 save_to_library 工具复用）
+export async function saveTopic({ title, angle, why, tags, platform, sourceTopic }) {
+  const list = (await readJSON(KEY)) || []
+  const record = {
+    id: newId(),
+    title,
+    angle: angle || '',
+    why: why || '',
+    tags: Array.isArray(tags) ? tags : [],
+    platform,
+    sourceTopic: sourceTopic || '',
+    status: 'saved',
+    createdAt: new Date().toISOString(),
+    publishedAt: null,
+  }
+  list.push(record)
+  await writeJSON(KEY, list)
+  return record
+}
+
 // 列表（按 createdAt 倒序）
 router.get('/api/saved-topics', async (_req, res) => {
   try {
@@ -24,21 +44,7 @@ router.post('/api/saved-topics', async (req, res) => {
   try {
     const { title, angle, why, tags, platform, sourceTopic } = req.body || {}
     if (!title || !platform) return res.status(400).json({ error: '缺少 title 或 platform' })
-    const list = (await readJSON(KEY)) || []
-    const record = {
-      id: newId(),
-      title,
-      angle: angle || '',
-      why: why || '',
-      tags: Array.isArray(tags) ? tags : [],
-      platform,
-      sourceTopic: sourceTopic || '',
-      status: 'saved',
-      createdAt: new Date().toISOString(),
-      publishedAt: null,
-    }
-    list.push(record)
-    await writeJSON(KEY, list)
+    const record = await saveTopic({ title, angle, why, tags, platform, sourceTopic })
     res.json(record)
   } catch (err) {
     res.status(500).json({ error: err.message || '保存选题失败' })

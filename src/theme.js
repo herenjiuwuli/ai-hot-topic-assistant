@@ -1,31 +1,22 @@
-import { ref } from 'vue'
 import { Chart } from 'chart.js'
 
-// 当前主题：'light' | 'dark'
-export const theme = ref(
-  typeof localStorage !== 'undefined' ? localStorage.getItem('theme') || 'light' : 'light'
-)
+// Tropical Paradise 固定暖色图表配置（本风格只有浅色主题，无深色模式）
+export const CHART = {
+  primary: '#00897b', // 蓝绿主色
+  warning: '#ffc107', // 芒果黄
+  coral: '#ff6f61', // 珊瑚红
+  palm: '#4caf50', // 棕榈绿
+  gray: '#c0c4cc', // 弱化点（未命中日期）
+  grid: '#e7f2ee',
+  text: '#8a9a97',
+}
 
-function applyChartDefaults() {
-  const dark = theme.value === 'dark'
-  Chart.defaults.color = dark ? '#8b929c' : '#8a9099'
-  Chart.defaults.borderColor = dark ? '#2a2e37' : '#eef0f3'
+export function applyChartDefaults() {
+  Chart.defaults.color = CHART.text
+  Chart.defaults.borderColor = CHART.grid
   Chart.defaults.font.family =
     '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif'
 }
 
-export function applyTheme() {
-  document.documentElement.setAttribute('data-theme', theme.value)
-  if (typeof localStorage !== 'undefined') localStorage.setItem('theme', theme.value)
-  applyChartDefaults()
-}
-
-export function toggleTheme() {
-  theme.value = theme.value === 'dark' ? 'light' : 'dark'
-  applyTheme()
-  // 通知图表组件重绘（颜色随主题变化）
-  window.dispatchEvent(new CustomEvent('theme-changed'))
-}
-
-// 模块加载即应用一次（main.js 之前 index.html 已内联初始化，避免闪白）
-applyTheme()
+// 模块加载即应用一次
+applyChartDefaults()

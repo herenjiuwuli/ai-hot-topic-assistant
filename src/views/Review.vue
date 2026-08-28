@@ -117,10 +117,10 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import { Chart, registerables } from 'chart.js'
-import { theme } from '../theme.js'
+import { CHART } from '../theme.js'
 
 Chart.register(...registerables)
 
@@ -303,8 +303,8 @@ async function nextTickDraw() {
   if (!chartCanvas.value || list.value.length === 0) return
   destroyChart()
 
-  const c = theme.value === 'dark' ? '#4ea1ff' : '#409eff'
-  const w = theme.value === 'dark' ? '#e6a23c' : '#e6a23c'
+  const c = CHART.primary
+  const w = CHART.warning
 
   const labels = list.value.map((r) => r.title)
   const viewsData = list.value.map((r) => r.views || 0)
@@ -328,11 +328,6 @@ async function nextTickDraw() {
     },
   })
 }
-
-// 主题切换时重绘图表
-watch(theme, () => {
-  if (list.value.length > 0) nextTickDraw()
-})
 
 onMounted(() => {
   if (route.query.title) form.value.title = route.query.title

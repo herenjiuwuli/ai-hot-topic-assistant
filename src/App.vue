@@ -1,7 +1,7 @@
 <template>
   <div id="app-root">
     <nav class="navbar">
-      <router-link to="/hotlist" class="nav-brand">AI 热榜</router-link>
+      <router-link to="/agent" class="nav-brand">AI 热榜</router-link>
       <div class="nav-links">
         <router-link
           v-for="link in navLinks"
@@ -13,9 +13,6 @@
           {{ link.label }}
         </router-link>
       </div>
-      <button class="theme-toggle" :title="theme === 'dark' ? '切换到浅色' : '切换到深色'" @click="toggleTheme">
-        {{ theme === 'dark' ? '☀️' : '🌙' }}
-      </button>
     </nav>
     <main>
       <router-view />
@@ -24,9 +21,8 @@
 </template>
 
 <script setup>
-import { theme, toggleTheme } from './theme.js'
-
 const navLinks = [
+  { path: '/agent', label: 'Agent' },
   { path: '/hotlist', label: '热榜' },
   { path: '/topics', label: '选题' },
   { path: '/saved-topics', label: '选题库' },
