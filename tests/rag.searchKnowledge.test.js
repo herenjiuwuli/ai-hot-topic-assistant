@@ -38,12 +38,24 @@ afterAll(() => {
 })
 
 describe('searchKnowledge 工具', () => {
-  it('知识库为空时返回提示', async () => {
+  it('索引为空时返回不可用提示', async () => {
     resetRagCache()
-    process.env.RAG_INDEX_PATH = path.join(os.tmpdir(), 'rag-nonexistent-xyz.json')
+    const emptyIndex = path.join(os.tmpdir(), `rag-empty-index-${Date.now()}.json`)
+    fs.writeFileSync(emptyIndex, JSON.stringify({ chunks: [], embeddings: [] }))
+    process.env.RAG_INDEX_PATH = emptyIndex
     const r = await searchKnowledge('版权')
     expect(typeof r).toBe('string')
-    expect(r).toContain('知识库为空')
+    expect(r).toContain('知识库不可用')
+    fs.unlinkSync(emptyIndex)
+  })
+
+  it('无索引文件时自动从 knowledge/ 运行时构建', async () => {
+    resetRagCache()
+    process.env.RAG_INDEX_PATH = path.join(os.tmpdir(), 'rag-nonexistent-xyz.json')
+    const r = await searchKnowledge('抖音 引流 平台适配')
+    expect(typeof r).toBe('string')
+    expect(r).toContain('来源')
+    expect(r).toContain('二次元赛道打法.md')
   })
 
   it('空查询返回提示', async () => {
