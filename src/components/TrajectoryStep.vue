@@ -49,6 +49,22 @@
         </ul>
       </div>
 
+      <!-- 知识检索（RAG）：片段列表 -->
+      <div v-else-if="isKnowledge" class="step-block knowledge-block">
+        <div class="block-label">知识库命中（{{ knowledgeFragments.length }} 段）</div>
+        <div v-if="knowledgeFragments.length" class="knowledge-list">
+          <div v-for="(k, i) in knowledgeFragments" :key="i" class="knowledge-item">
+            <div class="k-head">
+              <span class="k-source">📄 {{ k.source }}</span>
+              <span v-if="k.heading" class="k-heading">{{ k.heading }}</span>
+              <span class="k-score">相关度 {{ k.score }}</span>
+            </div>
+            <p class="k-text">{{ k.text }}</p>
+          </div>
+        </div>
+        <p v-else class="block-body">{{ String(props.step.result || '').trim() || '（无命中）' }}</p>
+      </div>
+
       <!-- 其他工具 / 出错：折叠 JSON -->
       <details class="step-block result-block" :open="openByDefault && !hasRich">
         <summary class="block-label">工具结果（{{ resultText }}）</summary>
@@ -78,6 +94,7 @@ const TOOL_LABELS = {
   generate_script: '生成脚本/文案',
   save_to_library: '保存到选题库',
   search_reference: '检索参考资料',
+  search_knowledge: '检索知识库',
   plan_schedule: '规划排期',
 }
 
@@ -116,8 +133,33 @@ const matches = computed(() => props.step.result?.matches || [])
 const generics = computed(() => props.step.result?.generic || [])
 const hint = computed(() => props.step.result?.hint || '')
 
+// 知识检索（RAG）：把 search_knowledge 返回的拼接文本解析成片段列表
+// 服务端格式：`【片段 N｜来源 file.md[｜标题]｜相关度 x.xx】\n正文`，片段间以 \n\n---\n\n 分隔
+const isKnowledge = computed(() => props.step.name === 'search_knowledge')
+const knowledgeFragments = computed(() => {
+  const r = props.step.result
+  if (typeof r !== 'string') return []
+  return r
+    .split('\n\n---\n\n')
+    .map((f) => f.trim())
+    .filter((f) => /^【片段/.test(f))
+    .map((f) => {
+      const end = f.indexOf('】')
+      const header = end > -1 ? f.slice(1, end) : ''
+      const text = end > -1 ? f.slice(end + 1).trim() : f
+      const parts = header.split('｜')
+      return {
+        index: (parts[0] || '').replace('片段 ', '').trim(),
+        source: (parts[1] || '').replace('来源 ', '').trim(),
+        heading: parts.length > 3 ? parts.slice(2, -1).join('｜').trim() : '',
+        score: (parts[parts.length - 1] || '').replace('相关度 ', '').trim(),
+        text,
+      }
+    })
+})
+
 // 有富化展示时，JSON 折叠默认收起，避免内容重复
-const hasRich = computed(() => isScript.value || isSaved.value || isSchedule.value || isSearch.value)
+const hasRich = computed(() => isScript.value || isSaved.value || isSchedule.value || isSearch.value || isKnowledge.value)
 const openByDefault = computed(() => props.index === 0)
 </script>
 
@@ -221,6 +263,42 @@ details.step-block summary:hover { color: var(--primary); }
   border-bottom: 1px dashed var(--border-soft);
 }
 .ref-item:last-child { border-bottom: none; }
+
+/* 知识检索（RAG） */
+.knowledge-block { background: var(--success-soft); border-color: rgba(103, 194, 58, 0.3); }
+.knowledge-list { display: flex; flex-direction: column; gap: 8px; }
+.knowledge-item {
+  padding: 8px 10px;
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-radius: 6px;
+}
+.k-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+.k-source { color: var(--success); font-weight: 600; }
+.k-heading { color: var(--text-2); }
+.k-score {
+  margin-left: auto;
+  color: var(--text-3);
+  font-size: 11px;
+  background: var(--surface-3);
+  padding: 1px 6px;
+  border-radius: 999px;
+}
+.k-text {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-2);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
 
 /* 终答 */
 .answer-block { background: var(--primary-soft); border-color: var(--primary-soft-2); }
