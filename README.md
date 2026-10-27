@@ -123,13 +123,16 @@ ai-hot-topic-assistant/
 
 ```bash
 # 安装依赖
-npm install
+# --legacy-peer-deps 是必需的：npm 10.9.x 解析这棵依赖树会崩在
+# 「Cannot read properties of null (reading 'edgesOut')」（本地与 CI 都复现过）
+npm install --legacy-peer-deps
 
-# 启动开发环境（同时起 Vite 前端 + Express 后端）
+# 启动开发环境（一条命令：先清端口残留 → 起前端 + 后端；后端异常退出会自动拉起）
 npm run dev
+# 想看两边原始日志、不要保活看护时用：npm run dev:raw
 ```
 
-- 前端：http://localhost:5173
+- 前端：http://localhost:5182
 - 后端：http://localhost:3000（Vite 已配置 `/api` 代理到该端口）
 - 本地可不配 `BLOB_READ_WRITE_TOKEN`，数据自动回退到本地 `data/` 目录
 - **体验 Agent**：页面进入「Agent」页提问（如"新人 coser 怎么定人设"）；不配 DeepSeek key 时设 `DEEPSEEK_MOCK=1` 可离线看完整流程
