@@ -1,0 +1,55 @@
+name: CI
+
+# 为什么补这个文件（2026-10-27）：
+#   另外两个主项目（api-test-platform / office-oa）早就有 CI 做回归，只有这个没有 ——
+#   于是「单测全绿」这件事全靠本地手动跑，一旦改了 RAG 的切块或检索，没人拦。
+#
+# 这个仓库的三层是：
+#   ① 安装依赖（lock 已提交，用 npm ci 保证和本地一致）
+#   ② 单测 + 覆盖率（vitest，37 条：切块 / 向量 / 检索 / 存储 / Agent / cron）
+#   ③ 构建（vite build —— Vercel 上部署的就是它，构建失败等于线上发不出去）
+#
+# ⚠️ 覆盖率现在是**基线锁**（vitest.config.js 里的 thresholds），不是"达标线"：
+#    实测 statements 28.85% / branches 20.79% / functions 30.13% / lines 29.14%，
+#    因为测试集中在 RAG 内部（chunk 86% / store 96%），路由层几乎没覆盖。
+#    基线锁的作用是**不许继续往下掉**；往上补是后面的活，不是靠改阈值假装达标。
+#
+# ⚠️ tests/ 里还有 pytest（test_topics.py 等），本机装不上依赖（缺 _socket），
+#    一直没跑过 —— 所以刻意不放进 CI：宁可"没有"，也不要做一条从没绿过的假门禁。
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: ① 装依赖
+        run: npm ci
+
+      - name: ② 单测 + 覆盖率（基线锁，掉下来就红）
+        run: npm run test:cov
+
+      - name: ③ 构建（Vercel 部署的产物就是它）
+        run: npm run build
+
+      - name: 覆盖率报告（留档，方便回看趋势）
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-summary
+          path: coverage/coverage-summary.json
+          retention-days: 7
+          if-no-files-found: ignore

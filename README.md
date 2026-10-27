@@ -72,7 +72,7 @@
 | **RAG** | **自写**：切块 / embedding（智谱·火山·OpenAI 可插拔）/ 内存余弦检索（未用 LangChain） |
 | 数据源 | 60s 热榜 API（`https://60s.viki.moe`）、B站官方排行榜 API |
 | 存储 | Vercel Blob（线上）/ 本地 fs（本地兜底） |
-| 测试 | Vitest（37 例：Agent 14 + cron 2 + RAG 19 + 切分等） |
+| 测试 | Vitest（100 例；后端语句覆盖 53.5% / 行 54.8%，有基线锁防回退） |
 | 部署 | Vercel（静态前端 `dist/` + `api/` Serverless 函数） |
 
 ---
@@ -106,7 +106,10 @@ ai-hot-topic-assistant/
 │   ├── views/              # 页面：Hotlist / Topics / Agent / SavedTopics / Trend / Review ...
 │   ├── components/         # 含 TrajectoryStep.vue（Agent 轨迹逐步渲染）
 │   └── ...
-├── tests/                  # Vitest 测试（37 例）
+├── tests/                  # Vitest 测试（100 例）
+│   ├── _helpers.js         # 起随机端口的真 Express 实例 + 临时数据目录隔离
+│   ├── routes.*.test.js    # 路由层：agent / topics / savedTopics
+│   └── ...                 # Agent 循环 / RAG / 模型调用层 / 演示假 LLM
 ├── public/
 ├── vercel.json             # 构建配置 + rewrites + includeFiles（关键）
 ├── vite.config.js
@@ -183,11 +186,30 @@ npm run dev
 ## 🧪 测试
 
 ```bash
-npm test        # Vitest，37 例全绿（离线可跑：测试统一注入 fake embedding）
+npm test        # Vitest，100 例全绿（离线可跑：统一注入 fake embedding / 假 LLM）
+npm run test:cov    # 同上 + 覆盖率报告（带基线锁，掉下来直接失败）
 npm run rag:ingest   # 重建 RAG 索引（读 knowledge/*.md → 生成 server/lib/rag/rag-index.json）
 ```
 
-- 覆盖：Agent ReAct 循环（mock LLM 免网）、cron 定时抓取、RAG 切块/向量化/检索/工具接入、SSE 路由。
+**覆盖率实测（2026-10-27，只统计后端 `server/` + `api/`，796 行）**：语句 53.5% / 分支 41.9% / 函数 53.1% / 行 54.8%。阈值取实测值向下取整写进 `vitest.config.js` —— 它的作用是「不许偷偷把覆盖降下去」，不是假装达标。
+
+分层覆盖情况：
+
+| 层 | 覆盖 | 说明 |
+|---|---|---|
+| `lib/agent.js` | 88.7% | ReAct 循环、多工具编排、中途挂掉的降级、MAX_ITER 兜底 |
+| `lib/ai.js` | 100% | 无 key / 上游 4xx-5xx / 响应缺字段 都锁定了 |
+| `lib/mockAgent.js` | 100% | 演示路径（免 key）也有回归，它坏了 demo 当场就断 |
+| `routes/topics.js` | 97.4% | 重点在「AI 返回格式不听话」：代码块围栏、裸数组、夹在废话里、解析失败 502 |
+| `routes/savedTopics.js` | 90% | 局部更新不冲掉未传字段、重复发布不刷新首发时间、并发保存 id 不撞 |
+| `routes/agent.js` | 81.3% | 参数校验 400 / 未配 key 的 503 / SSE 事件序列 |
+
+低覆盖的是 `hotlistSource`（测试里被打桩替换，真实抓取靠 cron 用例与线上）和几个次要路由（hotlist / snapshots / reviews / script / subscriptions），它们不是 Agent 主链路。
+
+两个测试基建上的约定：
+
+1. **路由测试起真 HTTP**（`app.listen(0)` 拿随机端口），不 mock req/res —— 中间件、状态码、SSE 头都是真跑的。
+2. **数据目录必须隔离**：`store.js` 读 `AI_HOT_TOPIC_DATA_DIR`，测试指向临时目录，跑完删掉。否则测一次选题库就写脏一次真实 `data/`。
 
 ---
 

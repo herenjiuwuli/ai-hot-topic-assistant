@@ -4,7 +4,13 @@ import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
-const DATA_DIR = join(__dirname, '..', '..', 'data')
+
+// 数据目录：默认仓库内 data/；测试用 AI_HOT_TOPIC_DATA_DIR 指到临时目录做隔离
+// ⚠️ 必须惰性读取（函数）而不是模块顶层常量：测试要在 import 之后的 beforeAll 里设 env，
+// 顶层常量在模块加载时就固化了，改了也没用 —— 那样测试会写进真实 data/。
+function dataDir() {
+  return process.env.AI_HOT_TOPIC_DATA_DIR || join(__dirname, '..', '..', 'data')
+}
 
 let blobStore = null
 
@@ -29,7 +35,7 @@ export async function readJSON(key) {
     }
   }
   // Fallback: local fs
-  const filePath = join(DATA_DIR, `${key}.json`)
+  const filePath = join(dataDir(), `${key}.json`)
   try {
     const raw = await readFile(filePath, 'utf-8')
     return JSON.parse(raw)
@@ -50,8 +56,9 @@ export async function writeJSON(key, data) {
     return
   }
   // Fallback: local fs
-  if (!existsSync(DATA_DIR)) {
-    await mkdir(DATA_DIR, { recursive: true })
+  const dir = dataDir()
+  if (!existsSync(dir)) {
+    await mkdir(dir, { recursive: true })
   }
-  await writeFile(join(DATA_DIR, `${key}.json`), jsonStr, 'utf-8')
+  await writeFile(join(dir, `${key}.json`), jsonStr, 'utf-8')
 }
