@@ -72,7 +72,7 @@
 | **RAG** | **自写**：切块 / embedding（智谱·火山·OpenAI 可插拔）/ 内存余弦检索（未用 LangChain） |
 | 数据源 | 60s 热榜 API（`https://60s.viki.moe`）、B站官方排行榜 API |
 | 存储 | Vercel Blob（线上）/ 本地 fs（本地兜底） |
-| 测试 | Vitest（102 例；后端语句覆盖 53.9% / 行 55.1%，有基线锁防回退） |
+| 测试 | Vitest（113 例；后端语句覆盖 56.0% / 行 57.1%，有基线锁防回退） |
 | **RAG 评测** | **自写评测集**：23 条标注，块级 Hit@3 91.3% / MRR 0.812（`npm run eval:rag`，见下节） |
 | 部署 | Vercel（静态前端 `dist/` + `api/` Serverless 函数） |
 
@@ -107,7 +107,7 @@ ai-hot-topic-assistant/
 │   ├── views/              # 页面：Hotlist / Topics / Agent / SavedTopics / Trend / Review ...
 │   ├── components/         # 含 TrajectoryStep.vue（Agent 轨迹逐步渲染）
 │   └── ...
-├── tests/                  # Vitest 测试（102 例）
+├── tests/                  # Vitest 测试（113 例）
 │   ├── _helpers.js         # 起随机端口的真 Express 实例 + 临时数据目录隔离
 │   ├── routes.*.test.js    # 路由层：agent / topics / savedTopics
 │   └── ...                 # Agent 循环 / RAG / 模型调用层 / 演示假 LLM
@@ -195,7 +195,7 @@ npm run dev
 ## 🧪 测试
 
 ```bash
-npm test        # Vitest，102 例全绿（离线可跑：统一注入 fake embedding / 假 LLM）
+npm test        # Vitest，113 例全绿（离线可跑：统一注入 fake embedding / 假 LLM）
 npm run test:cov    # 同上 + 覆盖率报告（带基线锁，掉下来直接失败）
 npm run rag:ingest   # 重建 RAG 索引（读 knowledge/*.md → 生成 server/lib/rag/rag-index.json）
 ```
@@ -221,6 +221,38 @@ npm run rag:ingest   # 重建 RAG 索引（读 knowledge/*.md → 生成 server/
 2. **数据目录必须隔离**：`store.js` 读 `AI_HOT_TOPIC_DATA_DIR`，测试指向临时目录，跑完删掉。否则测一次选题库就写脏一次真实 `data/`。
 
 ---
+
+## 🔍 Agent 过程断言（工具调用链）
+
+常规测试只问「答案对不对」。但 Agent 的故障几乎全在过程里，而且**答案可能完全正确**：
+
+| 故障 | 例子 | 终态断言能抓到吗 |
+|---|---|---|
+| 该调工具却凭记忆答 | 让它「基于热榜选题」，它直接编一个选题出来 | ❌ 编得还挺像 |
+| 调错工具 | 问热榜，它去查知识库 | ❌ 答案照样通顺 |
+| 参数越界 | `topK=999`、平台名传一个不存在的 | ❌ 结果看着正常 |
+| 编造工具名 | 幻觉出一个 `get_trending` | ❌ 执行器报错被当 observation 吞掉 |
+
+所以 `server/lib/trajectory.js` 把「什么样的调用链算合理」写成可执行规则，对 `runAgent`
+产出的 `trajectory` 求值：
+
+```js
+checkTrajectory(trajectory, {
+  mustCall: ['fetch_hot_topics', 'generate_script'],   // 必须调过
+  mustNotCall: ['save_to_library'],                    // 不该调（用户没让保存）
+  order: ['fetch_hot_topics', 'generate_script'],      // 子序列，中间可夹别的工具
+  maxCalls: 6,                                         // 防死循环前兆
+  argRules: { search_knowledge: (args) => (args.topK > 10 ? `topK=${args.topK} 越界` : null) },
+  requireAnswer: true,                                 // 被 MAX_ITER 截断时会报
+})
+```
+
+返回 `problems`（字符串数组），空数组 = 链子符合预期。`assertTrajectory` 直接抛错，
+报错里带完整调用链（`fetch_hot_topics({"limit":5}) → generate_script() → answer(...)`），
+不然只说「不符合预期」等于没说。
+
+`tests/agent.trace.test.js` 用注入的假 LLM 驱动四类缺陷各跑一遍 —— **不是断言「能正常跑」，
+是断言「能把它抓出来」**。其中「一直调工具不停」那条顺带把 `MAX_ITER = 8` 钉住了。
 
 ## 🔬 RAG 检索评测（recall@k / MRR）
 
@@ -323,4 +355,4 @@ q05「扮演年纪小的角色，互动话术要注意什么」——top3 全被
 
 ## 📄 License
 
-MIT
+[MIT](LICENSE) © 2026 周怡晨

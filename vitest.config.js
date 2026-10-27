@@ -9,12 +9,12 @@ export default defineConfig({
       include: ['server/**/*.js', 'api/**/*.js'],
       exclude: ['**/node_modules/**', 'tests/**', 'dist/**'],
       // 基线锁：当前实测值向下取整，改代码时不许把覆盖偷偷降下去
-      // 2026-10-27 实测：语句 53.85 / 分支 42.18 / 函数 53.06 / 行 55.05（796 行）
+      // 2026-10-27 实测（补过程断言后）：语句 56.01 / 分支 45.43 / 函数 55.48 / 行 57.09（796 行）
       thresholds: {
-        lines: 55,
-        statements: 53,
-        functions: 53,
-        branches: 42,
+        lines: 57,
+        statements: 56,
+        functions: 55,
+        branches: 45,
       },
     },
     // 只跑 JS 单测；tests/ 里的 pytest(.py) 不受影响
