@@ -13,7 +13,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:cov": "vitest run --coverage",
-    "rag:ingest": "node server/lib/rag/ingest.js"
+    "rag:ingest": "node server/lib/rag/ingest.js",
+    "eval:rag": "node scripts/eval-rag.mjs"
   },
   "dependencies": {
     "@vercel/blob": "^2.8.0",

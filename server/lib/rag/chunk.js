@@ -58,12 +58,20 @@ export function chunkText(text, { maxChars = 450 } = {}) {
 
   const chunks = []
   let buf = ''
-  let heading = ''
+  // currentHeading：最近一次遇到的小节标题；bufHeading：**当前块**所属的小节标题。
+  // 两者必须分开记：标题行会被并入上一块的缓冲区（为了段落还原不丢字符），
+  // 若落盘时直接用 currentHeading，块的 heading 就会变成「下一节」的标题 —— 元数据张冠李戴。
+  // 实测影响：heading 会随片段一起返回给模型（searchKnowledge 的「来源｜heading」），
+  // 标错的章节名会误导模型，也让排查召回问题时归因错位。
+  let currentHeading = ''
+  let bufHeading = ''
 
   for (const p of paragraphs) {
     const h = p.match(/^#{1,6}\s+(.*)$/)
     if (h) {
-      heading = h[1].trim()
+      currentHeading = h[1].trim()
+      // 缓冲区是空的：这个标题就是本块的开头标题
+      if (!clen(buf)) bufHeading = currentHeading
       // 标题本身通常很短，先并入缓冲区，跟随其后的正文一起成块
       buf = buf ? `${buf}\n\n${p}` : p
       continue
@@ -76,15 +84,17 @@ export function chunkText(text, { maxChars = 450 } = {}) {
       const sep = i === 0 ? '\n\n' : ''
       const candidate = buf ? `${buf}${sep}${piece}` : piece
       if (clen(candidate) > maxChars && clen(buf) > 0) {
-        // 当前块已满，落盘；新块从当前句子开始（干净起点，不携带上一块尾部）
-        chunks.push({ text: buf, heading })
+        // 当前块已满，落盘（用 bufHeading，不是 currentHeading）；新块从当前句子开始
+        chunks.push({ text: buf, heading: bufHeading })
         buf = piece
+        bufHeading = currentHeading
       } else {
+        if (!clen(buf)) bufHeading = currentHeading
         buf = candidate
       }
     }
   }
-  if (clen(buf) > 0) chunks.push({ text: buf, heading })
+  if (clen(buf) > 0) chunks.push({ text: buf, heading: bufHeading })
   return chunks
 }
 

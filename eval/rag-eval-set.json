@@ -1,0 +1,169 @@
+{
+  "version": 1,
+  "createdAt": "2026-10-27",
+  "note": "RAG 检索评测标注集。每条 = 一个真实会出现的检索需求 + 它应该命中的块。判据两级：source 命中算「文档级」、anchor 命中算「块级」（更严）。anchor 必须逐字出现在目标块原文里，脚本启动时会先自检，锚点写错会直接报「标注错误」而不是算成检索失败。",
+  "items": [
+    {
+      "id": "q01",
+      "query": "用番剧原声当背景音乐会不会被判违规",
+      "expect": { "source": "平台规则与雷区.md", "anchor": "BGM" },
+      "difficulty": "normal",
+      "why": "问的是 BGM 版权，对应「一、版权与 IP」下 BGM 那条"
+    },
+    {
+      "id": "q02",
+      "query": "接商单的时候 cos 大 IP 需不需要授权",
+      "expect": { "source": "平台规则与雷区.md", "anchor": "商用未授权角色" },
+      "difficulty": "normal",
+      "why": "商单 + 授权，对应「商用未授权角色」"
+    },
+    {
+      "id": "q03",
+      "query": "抖音上 Cos 特效妆会不会被误判成血腥",
+      "expect": { "source": "平台规则与雷区.md", "anchor": "误判血腥" },
+      "difficulty": "normal",
+      "why": "平台审核红线里的特效妆条款"
+    },
+    {
+      "id": "q04",
+      "query": "视频发出去总是没推荐，一般有哪些限流原因",
+      "expect": { "source": "平台规则与雷区.md", "anchor": "搬运痕迹重" },
+      "difficulty": "hard",
+      "why": "自查清单首条；措辞与原文「常见限流 / 降权原因」不重合，靠语义"
+    },
+    {
+      "id": "q05",
+      "query": "扮演年纪小的角色，互动话术要注意什么",
+      "expect": { "source": "平台规则与雷区.md", "anchor": "私聊姐姐" },
+      "difficulty": "normal",
+      "why": "未成年人条款里的互动话术，措辞换成了「年纪小」"
+    },
+    {
+      "id": "q06",
+      "query": "二次元账号的受众是谁，赛道方向怎么定",
+      "expect": { "source": "二次元赛道打法.md", "anchor": "为爱发电" },
+      "difficulty": "normal",
+      "why": "赛道定位与核心人群"
+    },
+    {
+      "id": "q07",
+      "query": "账号内容应当拆成哪几个栏目轮流更新",
+      "expect": { "source": "二次元赛道打法.md", "anchor": "四大内容支柱" },
+      "difficulty": "normal",
+      "why": "四大内容支柱（栏目化）"
+    },
+    {
+      "id": "q08",
+      "query": "同一条 cos 素材在抖音和 B站 应该怎么剪",
+      "expect": { "source": "二次元赛道打法.md", "anchor": "抖音做漏斗引流" },
+      "difficulty": "normal",
+      "why": "平台适配（同一素材不同剪法）"
+    },
+    {
+      "id": "q09",
+      "query": "更新频率多久一次不容易掉流量",
+      "expect": { "source": "二次元赛道打法.md", "anchor": "断更超过两周" },
+      "difficulty": "normal",
+      "why": "更新节奏"
+    },
+    {
+      "id": "q10",
+      "query": "抢新角色上线的热度做正片，要注意什么",
+      "expect": { "source": "往期爆款复盘.md", "anchor": "新角色上线当周" },
+      "alsoAccept": [{ "source": "往期爆款复盘.md", "anchor": "抢热点还原" }],
+      "difficulty": "normal",
+      "why": "案例一：高还原正片。注意：打法总表那块写着「抢热点还原｜新番/新游角色上线周｜原设对比图…」，从「要注意什么」这个问法看其实更贴切，所以列为可接受答案。这类歧义必须留在标注里 —— 不能事后把 expect 改成命中项来抬分，那等于自己骗自己"
+    },
+    {
+      "id": "q11",
+      "query": "平价假发教程为什么能带来长期流量",
+      "expect": { "source": "往期爆款复盘.md", "anchor": "收藏率是均值 5 倍" },
+      "difficulty": "normal",
+      "why": "案例二：新手向教程"
+    },
+    {
+      "id": "q12",
+      "query": "漫展联动的 vlog 怎么设计互动环节",
+      "expect": { "source": "往期爆款复盘.md", "anchor": "互补赛道" },
+      "difficulty": "normal",
+      "why": "案例三：展场 Vlog 联动"
+    },
+    {
+      "id": "q13",
+      "query": "有哪几种可以直接复用的选题打法",
+      "expect": { "source": "往期爆款复盘.md", "anchor": "抢热点还原" },
+      "difficulty": "normal",
+      "why": "可复用打法总表"
+    },
+    {
+      "id": "q14",
+      "query": "新号为什么必须先定人设再谈内容",
+      "expect": { "source": "账号人设定位.md", "anchor": "人设是账号的地基" },
+      "difficulty": "normal",
+      "why": "为什么先定人设再定内容"
+    },
+    {
+      "id": "q15",
+      "query": "技术流和邻家感两条人设路线怎么选",
+      "expect": { "source": "账号人设定位.md", "anchor": "邻家陪伴感" },
+      "difficulty": "normal",
+      "why": "两种主流人设及适用场景"
+    },
+    {
+      "id": "q16",
+      "query": "人设怎么保持统一，需要固定哪些东西",
+      "expect": { "source": "账号人设定位.md", "anchor": "口头禅" },
+      "difficulty": "hard",
+      "why": "一致性四件套；「统一」与原文「一致性」语义相近但字面不同"
+    },
+    {
+      "id": "q17",
+      "query": "人设容易在哪些地方翻车",
+      "expect": { "source": "账号人设定位.md", "anchor": "人设飘移" },
+      "difficulty": "normal",
+      "why": "人设翻车雷区"
+    },
+    {
+      "id": "q18",
+      "query": "从灵感到选题之间差了什么，为什么要用 AI 补这一步",
+      "expect": { "source": "AI生成选题（工作台接入）.md", "anchor": "最后一公里" },
+      "difficulty": "normal",
+      "why": "为什么在灵感→选题这步接 AI"
+    },
+    {
+      "id": "q19",
+      "query": "接入大模型时 API key 应该放在哪里才安全",
+      "expect": { "source": "AI生成选题（工作台接入）.md", "anchor": "绝不放在项目目录内" },
+      "difficulty": "hard",
+      "why": "密钥安全那条；问法完全不同，靠语义"
+    },
+    {
+      "id": "q20",
+      "query": "AI 生成选题的后端接口和前端交互怎么设计",
+      "expect": { "source": "AI生成选题（工作台接入）.md", "anchor": "/api/ai/angle" },
+      "difficulty": "normal",
+      "why": "技术落地里的接口与交互"
+    },
+    {
+      "id": "q21",
+      "query": "接 AI 功能踩过哪些坑",
+      "expect": { "source": "AI生成选题（工作台接入）.md", "anchor": "点了就变状态" },
+      "difficulty": "normal",
+      "why": "教训沉淀"
+    },
+    {
+      "id": "q22",
+      "query": "新人起号第一步该做什么",
+      "expect": { "source": "账号人设定位.md", "anchor": "运营第一步永远是" },
+      "difficulty": "hard",
+      "why": "故意放的模糊题：既可能命中「人设第一步」，也可能命中「栏目/更新节奏」。标注按语义上最该命中的那条"
+    },
+    {
+      "id": "q23",
+      "query": "视频被限流了怎么补救",
+      "expect": { "source": "平台规则与雷区.md", "anchor": "限流一次要养很久" },
+      "difficulty": "hard",
+      "why": "故意放的模糊题：「限流」+「补救」跨了两个块（红线铁律 / 自查清单）。标注按「铁律」那块，预期这条会摇摆"
+    }
+  ]
+}

@@ -82,4 +82,32 @@ describe('chunkText', () => {
     expect(headings.some((h) => h.includes('赛道定位'))).toBe(true)
     expect(headings.some((h) => h.includes('内容支柱'))).toBe(true)
   })
+
+  // 上面那条是松断言：只要求标题"出现在某处"。它漏过一个真实缺陷 ——
+  // 标题行会被并入上一块的缓冲区，而落盘时又取了「最近遇到」的标题，
+  // 于是块的 heading 整体偏移一节（这块装的是第一节正文，标的却是第二节标题）。
+  // heading 会随片段一起返回给模型，标错等于告诉模型「这段出自 XX 节」，属于会误导人的错。
+  it('heading 必须描述本块正文，不能是下一节的标题', () => {
+    // 两节各 300 字，maxChars=450 → 第一节正文 + 第二节标题必然撑爆缓冲区，
+    // 于是这里会真的切成两块（fixture 太短就切不开，那样测的是「同一块」而不是归属）
+    const a = '甲'.repeat(300) + '。'
+    const b = '乙'.repeat(300) + '。'
+    const text = [`## 第一节`, a, `## 第二节`, b].join('\n\n')
+    const chunks = chunkText(text, { maxChars: 450 })
+
+    expect(chunks.length).toBeGreaterThanOrEqual(2)
+    const first = chunks.find((c) => c.text.includes('甲'))
+    const second = chunks.find((c) => c.text.includes('乙'))
+    expect(first).not.toBe(second)
+    expect(first.heading).toBe('第一节')
+    expect(second.heading).toBe('第二节')
+  })
+
+  it('块首是文档大标题时，该块 heading 记为大标题（而不是后面某个小节名）', () => {
+    const chunks = chunkText(doc, { maxChars: 450 })
+    const first = chunks[0]
+    // doc 的第一块装的是文首说明 + 第一节开头，标题是文档名
+    expect(first.text.startsWith('# ')).toBe(true)
+    expect(first.heading).toBe(doc.split('\n')[0].replace(/^#\s+/, '').trim())
+  })
 })
